@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 34">
+  <defs>
+    <linearGradient id="brass" x2="0" y2="1">
+      <stop stop-color="#ffe6a4"/>
+      <stop offset=".28" stop-color="#d4a25a"/>
+      <stop offset=".56" stop-color="#9a612d"/>
+      <stop offset=".78" stop-color="#654122"/>
+      <stop offset="1" stop-color="#bd874a"/>
+    </linearGradient>
+    <linearGradient id="rim" x2=".85" y2="1">
+      <stop stop-color="#ffdf8b"/>
+      <stop offset=".46" stop-color="#b98244"/>
+      <stop offset="1" stop-color="#56351f"/>
+    </linearGradient>
+  </defs>
+  <path d="M23 10h112l7 7-7 7H23z" fill="url(#brass)" stroke="#382719" stroke-width="1.5"/>
+  <path d="M31 12h101l4 3H31z" fill="#ffda89" opacity=".56"/>
+  <path d="M30 21h104" stroke="#372419" stroke-opacity=".68"/>
+  <path d="M31 9h11v16H31zm82 0h8v16h-8z" fill="url(#rim)" stroke="#56361e" stroke-width="1.4"/>
+  <path d="M34 11v11m5-11v11m77-11v11m3-11v11" stroke="#ffe1a0" stroke-opacity=".62"/>
+  <path d="M3 17a14 14 0 1 1 28 0 14 14 0 1 1-28 0zm9 0a5 5 0 1 0 10 0 5 5 0 1 0-10 0z" fill="url(#rim)" fill-rule="evenodd" stroke="#3c291d" stroke-width="1.4"/>
+  <path d="M6 16a11 11 0 0 1 18-8M12 20a5.8 5.8 0 0 0 8 2" fill="none" stroke="#ffdf98" stroke-width="1.2" stroke-linecap="round"/>
+  <path d="m16 5 1-1 1 1-1 1zm-10 12 1-1 1 1-1 1zm20 0 1-1 1 1-1 1zm-10 11 1-1 1 1-1 1z" fill="#ffe0a1"/>
+</svg>

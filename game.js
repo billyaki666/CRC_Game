@@ -2,53 +2,84 @@
 
 const levels = [
   {
-    title: "马厩困境", area: "皇家马厩", region: "stable", map: [12, 69], coins: 120,
-    clue: "火挡住了去路。观察水槽下方的金针。",
-    pins: [["water", 53], ["gate", 25]], goals: ["water"],
+    title: "The Royal Stable", region: "stable", map: [12, 69], coins: 120,
+    bays: [
+      { id: "water", x: 40, sluice: true },
+      { id: "hay", x: 68 },
+    ],
   },
   {
-    title: "峡谷陷坑", area: "峡谷遗迹", region: "canyon", map: [31, 57], coins: 180,
-    clue: "草料从上方落下，能把尖刺垫成一段平路。",
-    pins: [["hay", 53], ["gate", 25]], goals: ["hay"],
+    title: "Cinder Crossing", region: "canyon", map: [31, 57], coins: 180,
+    bays: [
+      { id: "water", x: 43, sluice: true },
+      { id: "hay", x: 57.5, after: ["water"] },
+    ],
   },
   {
-    title: "幽狼暗道", area: "地下通道", region: "tunnel", map: [49, 72], coins: 260,
-    clue: "草料会压下侧笼踏板。等狼进笼，再放下笼门。",
-    pins: [["bait", 38], ["cage", 48], ["gate", 25]], goals: ["cage"],
+    title: "Wolfgate Tunnels", region: "tunnel", map: [49, 72], coins: 260,
+    bays: [
+      { id: "bait", x: 32 },
+      { id: "water", x: 51 },
+      { id: "rock", x: 68, after: ["cage"] },
+      { id: "hay", x: 84 },
+    ],
   },
   {
-    title: "熔岩马道", area: "竞技场地窟", region: "arena", map: [67, 57], coins: 360,
-    clue: "高温会点燃草料。先降温，再铺过陷坑的路。",
-    pins: [["water", 65], ["hay", 43], ["gate", 25]], goals: ["water", "hay"],
+    title: "Twin Furnaces", region: "forge", map: [67, 57], coins: 360,
+    bays: [
+      { id: "water", x: 31, sluice: true },
+      { id: "hay", x: 45, after: ["water"] },
+      { id: "rock", x: 59 },
+      { id: "water-east", x: 76, sluice: true },
+    ],
   },
   {
-    title: "王冠赛道", area: "古代竞技场", region: "arena", map: [86, 41], coins: 580,
-    clue: "引水灭火。等狼进侧笼，落下笼门后再释放滚石。",
-    pins: [["water", 55], ["bait", 32], ["cage", 42], ["rock", 72], ["gate", 24]],
-    goals: ["water", "cage", "rock"],
+    title: "The Crown Run", region: "arena", map: [86, 41], coins: 580,
+    bays: [
+      { id: "water", x: 29, sluice: true },
+      { id: "hay", x: 43, after: ["water"] },
+      { id: "bait", x: 55 },
+      { id: "rock", x: 72, after: ["cage"] },
+      { id: "water-east", x: 83, sluice: true, outlet: "rock" },
+    ],
   },
 ];
 
-const info = {
-  water: { name: "水槽", image: "water", goal: "扑灭火焰", hint: "拔出水槽下方的横针，引水灭火。" },
-  hay: { name: "草料槽", image: "hay", goal: "覆盖尖刺", hint: "拔出草料下方的横针，盖住尖刺。" },
-  bait: { name: "草料踏板", image: "hay", hint: "放下草料压动机关，把狼引进侧笼。" },
-  cage: { name: "狼笼门", image: "wolf", goal: "关住灰狼", hint: "拔出侧笼旁的竖针，关住已经进笼的狼。" },
-  rock: { name: "滚石槽", image: "rock", goal: "填平陷坑", hint: "狼已关住。松开滚石，让它落进陷坑。" },
-  gate: { name: "马厩门", image: "horse", hint: "前路已清，拔出赛马右侧的竖针。" },
+const labels = {
+  water: "Water tank", hay: "Hay bundle", rock: "Boulder",
+  bait: "Wolf lure", cage: "Cage gate release", sluice: "Sluice", gate: "Stable gate",
 };
-
+const kind = (id) => id.split("-")[0];
 const $ = (id) => document.getElementById(id);
 const asset = (name) => "assets/" + name + ".png";
+const mechanismAsset = (name) => "assets/mechanisms/" + name + ".webp";
+const ground = 86;
+const floorSurface = 86.5;
+const wolfGround = floorSurface + 1;
+const penSurface = floorSurface - 1.45;
+const hayPlateOffset = 7.1;
+const hayGuideTop = 74;
+const hayPlateSurface = floorSurface - 2;
+const shelf = 35;
+const sluiceCatch = 51.2;
+const baitWidth = 5.5;
+const baitHeight = 12;
+const stableStart = 9;
+const finishLine = 94;
+const timing = {
+  pin: 620, valve: 570, sluiceRelease: 205, stream: 1050, sluiceStream: 850, blockedStream: 720, steam: 1250,
+  drain: 1500, hay: 970, haySlide: 510, bridge: 790, rock: 1430, rockCrush: 320, lure: 1100, impact: 850,
+  wolf: 1450, cage: 860, gate: 800, run: 3100, fall: 1450, fallImpact: 490, chest: 1240, result: 950,
+};
 const storageKey = "horse-pin-rescue-v1";
-const format = new Intl.NumberFormat("zh-CN");
-const ground = 85;
-const upper = 41.5;
-let progress = {};
+const format = new Intl.NumberFormat("en");
+const progress = {};
+
 try {
   const saved = JSON.parse(localStorage.getItem(storageKey));
-  for (const [i, level] of levels.entries()) {
-    if (saved && saved[i] === level.pins.length) progress[i] = saved[i];
+  for (const [i] of levels.entries()) {
+    if (!Number.isInteger(saved?.[i]) || saved[i] < 1) break;
+    progress[i] = saved[i];
   }
 } catch {}
 
@@ -59,44 +90,50 @@ function unlocked() {
 let current = unlocked();
 let state;
 let items;
-let pinButtons;
-let audioContext;
+let pins;
 let muted = true;
 
-function sound(type) {
+const music = new Audio("assets/audio/bards-tale.wav");
+music.loop = true;
+music.volume = .26;
+music.preload = "none";
+const effects = Object.fromEntries(Object.entries({
+  pull: ["pin-pull.wav", .55], impact: ["impact.wav", .48],
+  gallop: ["gallop.mp3", .62], splash: ["splash.ogg", .53],
+}).map(([name, [file, volume]]) => {
+  const clip = new Audio("assets/audio/" + file);
+  clip.volume = volume;
+  clip.loop = name === "gallop";
+  return [name, clip];
+}));
+
+function sound(name) {
   if (muted) return;
-  try {
-    audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
-    audioContext.resume().catch(() => {});
-    const notes = {
-      pull: [440, 620], water: [510, 440, 330], drop: [190, 110],
-      fail: [235, 180, 115], win: [392, 494, 587, 784],
-    };
-    for (const [i, frequency] of notes[type].entries()) {
-      const tone = audioContext.createOscillator();
-      const volume = audioContext.createGain();
-      const start = audioContext.currentTime + i * .085;
-      tone.type = type === "fail" ? "triangle" : "sine";
-      tone.frequency.value = frequency;
-      volume.gain.setValueAtTime(.1, start);
-      volume.gain.exponentialRampToValueAtTime(.001, start + .16);
-      tone.connect(volume).connect(audioContext.destination);
-      tone.start(start);
-      tone.stop(start + .17);
-    }
-  } catch {}
+  const clip = effects[name];
+  clip.currentTime = 0;
+  clip.play().catch(() => {});
 }
 
-function icon(name) {
+function stopSound(name) {
+  effects[name].pause();
+  effects[name].currentTime = 0;
+}
+
+function icon(name, source = asset(name)) {
   const image = document.createElement("img");
-  image.src = asset(name);
+  image.src = source;
   image.alt = "";
   image.draggable = false;
   return image;
 }
 
-function sprite(parent, name, x, y, w, h, extra = "") {
-  const el = icon(name);
+function position(el, x, y) {
+  el.style.setProperty("--x", x + "%");
+  el.style.setProperty("--y", y + "%");
+}
+
+function sprite(parent, name, x, y, w, h, extra = "", source) {
+  const el = icon(name, source);
   el.className = "sprite " + extra;
   el.style.setProperty("--w", w + "%");
   el.style.setProperty("--h", h + "%");
@@ -105,255 +142,549 @@ function sprite(parent, name, x, y, w, h, extra = "") {
   return el;
 }
 
-function position(el, x, y) {
-  el.style.setProperty("--x", x + "%");
-  el.style.setProperty("--y", y + "%");
+function mechanism(name, x, y, w, h, extra = "", layer = "scenery") {
+  return sprite(layer, name, x, y, w, h, "fill " + extra, mechanismAsset(name));
 }
 
-function recess(x, y, w, h) {
-  const panel = document.createElement("div");
-  panel.className = "recess";
-  Object.assign(panel.style, { left: x + "%", top: y + "%", width: w + "%", height: h + "%" });
-  $("scenery").append(panel);
+function hingedLeaf(x, y, width, depth) {
+  const leaf = icon("iron-leaf", mechanismAsset("iron-leaf"));
+  leaf.className = "valve-leaf";
+  Object.assign(leaf.style, { left: (x - width / 2) + "%", top: y + "%", width: width + "%", height: depth + "%" });
+  $("scenery").append(leaf);
+  mechanism("hinge-bearing", x + width / 2, y + 2.3, 2.45, 4.6, "valve-bearing");
+  return leaf;
 }
 
-function tag(label, x, y) {
-  const el = document.createElement("b");
-  el.className = "cell-tag";
+function drawHayBridge(model, x) {
+  mechanism("hay-guide", x - hayPlateOffset / 2, hayPlateSurface + .65, hayPlateOffset + .25,
+    hayPlateSurface - hayGuideTop + 1.25, "hay-guide");
+  model.plate = mechanism("pressure-plate", x - hayPlateOffset, floorSurface + .2, 5, 2.7, "pressure-plate");
+  model.bridgeLink = panel("bridge-linkage", x - hayPlateOffset, floorSurface + 6.9, hayPlateOffset + 5.7, .65);
+  model.bridge = icon("drawbridge", mechanismAsset("drawbridge"));
+  model.bridge.className = "drawbridge";
+  Object.assign(model.bridge.style, { left: (x - 5.9) + "%", top: floorSurface + "%", width: "11.8%" });
+  model.bridge.style.setProperty("--bridge-time", timing.bridge + "ms");
+  $("actors").append(model.bridge);
+  mechanism("hinge-bearing", x + 5.7, floorSurface + 2.2, 2.1, 4.1, "bridge-bearing", "actors");
+}
+
+const animationFiles = [
+  "horse-idle", "horse-run", "horse-fall", "fire", "water", "waterfall", "quench",
+  "hay-fall", "rock-fall", "hay-impact", "rock-impact", "bait-fall", "bait-impact",
+  "wolf-idle", "wolf-walk", "ground-puddle", "chest-open",
+];
+const motionAsset = (name) => "assets/motion/" + name + ".webp";
+const animationImages = Object.fromEntries(animationFiles.map((name) => {
+  const image = new Image();
+  image.src = motionAsset(name);
+  return [name, image];
+}));
+
+function animateSprite(el, name, fallback) {
+  const image = animationImages[name];
+  const apply = () => {
+    if (el.dataset.motion !== name) return;
+    el.src = image.naturalWidth ? image.src : asset(fallback);
+  };
+  el.dataset.motion = name;
+  apply();
+  if (!image.complete) image.addEventListener("load", apply, { once: true });
+  return el;
+}
+
+function still(el, name) {
+  delete el.dataset.motion;
+  el.src = motionAsset(name);
+}
+
+function panel(className, x, y, w, h, label = "") {
+  const el = document.createElement(label ? "b" : "div");
+  el.className = className;
   el.textContent = label;
-  Object.assign(el.style, { left: x + "%", top: y + "%" });
+  Object.assign(el.style, { left: x + "%", top: y + "%", width: w + "%", height: h + "%" });
   $("scenery").append(el);
+  return el;
 }
 
-function addPin(id, x) {
-  const vertical = id === "gate" || id === "cage";
+function tag(label, x, y, extra = "") {
+  return panel("cell-tag " + extra, x, y, "auto", "auto", label);
+}
+
+function addPin(id, x, y, options = {}) {
+  const { vertical = false, label = labels[kind(id)], bay } = options;
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "pin" + (vertical ? " vertical" : "");
-  btn.setAttribute("aria-label", "拔出" + info[id].name + "的机关针");
-  btn.title = info[id].name;
-  position(btn, x, id === "gate" ? 70 : id === "cage" ? 61 : 44);
-  btn.style.setProperty("--w", vertical ? "7.6%" : "17%");
-  btn.style.setProperty("--h", id === "gate" ? "31%" : id === "cage" ? "23%" : "10%");
-  btn.style.setProperty("--length", id === "gate" ? "186%" : "141%");
-  btn.append(icon("pin"));
-  btn.addEventListener("click", () => pull(id));
+  btn.setAttribute("aria-label", "Pull " + label + " pin");
+  btn.title = label;
+  position(btn, x, y);
+  const art = icon("pin");
+  art.src = "assets/bronze-pin.svg";
+  btn.style.setProperty("--pull-time", timing.pin + "ms");
+  btn.append(art);
+  btn.addEventListener("pointermove", (event) => {
+    if (event.pointerType === "touch") return;
+    const rect = art.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width;
+    const y = (event.clientY - rect.top) / rect.height;
+    btn.style.setProperty("--shine-x", (vertical ? y : x) * 100 + "%");
+    btn.style.setProperty("--shine-y", (vertical ? 1 - x : y) * 100 + "%");
+  });
+  btn.addEventListener("click", (event) => requestPull(id, event.detail === 0));
   $("pins").append(btn);
-  pinButtons[id] = btn;
+  pins[id] = { btn, bay };
 }
 
 function status(message, tone = "") {
-  $("status").textContent = message;
-  $("status").dataset.tone = tone;
+  const line = $("status");
+  line.textContent = message;
+  line.dataset.tone = tone;
 }
 
 function hud() {
-  const level = levels[current];
-  const goals = [
-    ["horse", "救出赛马", state.outcome === "win"],
-    ["chest", "收集宝箱", state.outcome === "win"],
-    ...level.goals.map((id) => [info[id].image, info[id].goal, state.done.has(id)]),
-  ];
-  $("goals").replaceChildren(...goals.map(([image, title, done]) => {
-    const li = document.createElement("li");
-    li.classList.toggle("done", done);
-    li.append(icon(image), document.createTextNode(title + (done ? " ✓" : "")));
-    return li;
-  }));
-  $("steps").textContent = state.steps + " / " + level.pins.length;
-  $("segments").replaceChildren(...level.pins.map((_, i) => {
-    const el = document.createElement("i");
-    el.classList.toggle("used", i < state.steps);
-    return el;
-  }));
+  $("steps").textContent = state.steps + " / " + Object.keys(pins).length + " pins";
   $("coins").textContent = format.format(levels.reduce((sum, level, i) => sum + (progress[i] ? level.coins : 0), 0));
+}
+
+function drawBay(bay) {
+  const { id, x, sluice, after, outlet } = bay;
+  const type = kind(id);
+  const model = items[id] = {};
+  mechanism("stone-arch", x, 37, 11.6, 25, "loading-arch");
+  tag(id === "water-east" ? "East tank" : labels[type], x, 5);
+  model.load = sprite("actors", type === "bait" ? "hay" : type, x, shelf,
+    type === "water" ? 8.6 : type === "bait" ? baitWidth : 8.1,
+    type === "water" ? 15 : type === "bait" ? baitHeight : 18, type === "water" ? "tank-water" : "",
+    type === "bait" ? motionAsset("bait-ready") : undefined);
+  addPin(id, x, 36.8, { bay, label: id === "water-east" ? "East tank" : labels[type] });
+
+  if (type === "water") {
+    mechanism("chute-rails", x, 69, 10.3, 32.5, "chute-rails");
+    animateSprite(model.load, "water", "water");
+    model.fire = animateSprite(sprite("actors", "fire", x, ground, 10.5, 23, "fire"), "fire", "fire");
+    if (sluice) {
+      model.sluice = hingedLeaf(x, sluiceCatch + 1, 6.3, 2.4);
+      tag("Sluice", x, 43.8, "secondary");
+      addPin(id + "-sluice", x, 54.5, { bay, label: id === "water-east" ? "East sluice" : "Sluice" });
+    }
+    model.drain = mechanism("drain-outlet", x, 94, 10.4, 5.65, "drain-outlet");
+    if (outlet) {
+      const pit = levels[current].bays.find((candidate) => candidate.id === outlet);
+      model.outlet = mechanism("drain-grate", (pit.x + x) / 2, 89.7, x - pit.x, 2.6, "outlet-duct");
+      tag("Shared runoff", (x + pit.x) / 2, 93.1, "secondary duct-tag");
+    }
+  } else if (type === "bait") {
+    mechanism("cage-back", x, penSurface + 1.15, 13.4, 23, "cage-back");
+    model.linkage = mechanism("cage-linkage", x + 4.25, penSurface - 13.5, 1.15, 13.5, "cage-linkage");
+    mechanism("cage-catch", x + 4.25, 62.1, 7.4, 5.8, "cage-catch");
+    model.bars = mechanism("cage-grille", x, penSurface + .65, 12.2, 17.4, "cage-door open", "actors");
+    model.bars.style.setProperty("--gate-time", timing.cage + "ms");
+    items.wolf = animateSprite(sprite("actors", "wolf", x + 7.5, wolfGround, 8.2, 14.6, "wolf"), "wolf-idle", "wolf");
+    tag("Cage release", x + 4.25, 50.5, "secondary");
+    addPin("cage", x + 4.25, 59.5, { bay });
+  } else {
+    model.trench = mechanism("stone-trench", x, floorSurface + 7.5, 11.6, 7.8, "stone-trench");
+    model.spikes = sprite("actors", "spikes", x, floorSurface + 6.8, 10.3, type === "hay" ? 5.3 : 7.1, "pit-spikes");
+    if (type === "hay") drawHayBridge(model, x);
+    if (type === "hay" && after) {
+      model.heat = panel("hot-pit", x - hayPlateOffset - 4, 77, 8, 11);
+      model.heatLabel = tag("Hot trigger", x - hayPlateOffset, 68.5, "secondary");
+    }
+  }
+}
+
+function drawTrack(bays) {
+  let start = 2.75;
+  for (const { id, x } of bays) {
+    if (id !== "hay" && id !== "rock") continue;
+    panel("track-section", start, floorSurface, x - 5.5 - start, 7.5);
+    start = x + 5.5;
+  }
+  panel("track-section", start, floorSurface, 97.25 - start, 7.5);
+}
+
+function mountHorse() {
+  const mount = document.createElement("div");
+  mount.className = "horse-mount";
+  position(mount, stableStart, floorSurface);
+  $("actors").append(mount);
+  const horse = icon("horse");
+  horse.className = "horse";
+  mount.append(horse);
+  items.horseTrack = mount;
+  items.horse = animateSprite(horse, "horse-idle", "horse");
 }
 
 function reset(index = current) {
   current = index;
   const level = levels[current];
-  state = { done: new Set(), steps: 0, busy: false, outcome: "" };
+  state = { done: new Set(), pending: new Map(), steps: 0, busy: false, outcome: "" };
   items = {};
-  pinButtons = {};
-  $("map-dialog").close();
-  $("result").close();
-  $("board").dataset.region = level.region;
-  $("board").classList.remove("failed", "shake");
+  pins = {};
+  stopSound("gallop");
+  for (const id of ["map-dialog", "result"]) $(id).close();
+  const board = $("board");
+  $("game").dataset.region = level.region;
+  board.classList.remove("failed", "shake", "enter");
   for (const id of ["scenery", "actors", "pins", "effects"]) $(id).replaceChildren();
-  $("chapter").textContent = "第 " + String(current + 1).padStart(2, "0") + " / 05 关";
+  $("chapter").textContent = "Trial " + String(current + 1).padStart(2, "0") + " / " + String(levels.length).padStart(2, "0");
   $("level-title").textContent = level.title;
-  $("zone").textContent = level.area;
-  $("clue").textContent = level.clue;
+  $("zone").textContent = "Royal Circuit";
 
-  recess(4, 48, 94, 37.5);
-  sprite("scenery", "pillar", 4, 88, 4.7, 79, "fill");
-  sprite("scenery", "pillar", 96, 88, 4.7, 79, "fill");
-  sprite("scenery", "banner", 14, 45, 13, 34);
-  sprite("scenery", "banner", 86, 40, 10, 27);
-  for (const x of [19, 50, 81]) sprite("scenery", "stone", x, 93, 32, 8.5, "fill");
-  sprite("scenery", "portal", 90, ground, 13.8, 35, "portal");
+  drawTrack(level.bays);
+  sprite("scenery", "portal", finishLine, floorSurface, 10.5, 31, "portal");
+  mechanism("stone-arch", 19.25, floorSurface, 9.1, 34.5, "stable-arch");
+  items.gate = sprite("actors", "bars", 19.25, floorSurface, 6.1, 29.6, "gate-bars stable-bars fill");
+  items.gate.src = "assets/stable-grille.svg";
+  items.gate.style.setProperty("--gate-time", timing.gate + "ms");
+  tag("Stable gate", 19.3, 48.6, "secondary");
+  addPin("gate", 22.55, 72, { vertical: true });
+  for (const bay of level.bays) drawBay(bay);
 
-  for (const [id, x] of level.pins) {
-    if (id === "gate") {
-      items.gate = sprite("actors", "bars", x - 1.9, ground, 6.5, 31, "gate-bars fill");
-    } else if (id === "cage") {
-      recess(x - 14, 47, 13, 21);
-      sprite("scenery", "stone", x - 7.3, 69, 14.5, 4, "fill");
-      items.cage = sprite("actors", "bars", x - 6.9, 65.5, 9.5, 17.5, "gate-bars open fill");
-      items.wolf = sprite("actors", "wolf", x + 6.5, ground, 14, 19);
-      tag("侧笼", x - 7, 47.1);
-    } else {
-      const bayWidth = level.pins.length > 4 ? 16.2 : 19.2;
-      recess(x - bayWidth / 2, 16, bayWidth, 27);
-      sprite("scenery", "stone", x, 17, bayWidth + 2, 5, "fill");
-      sprite("scenery", "pillar", x - bayWidth / 2, 44, 2.8, 29, "fill");
-      sprite("scenery", "pillar", x + bayWidth / 2, 44, 2.8, 29, "fill");
-      tag(info[id].name, x, 8);
-      const width = id === "rock" ? 10.3 : id === "water" ? 14.5 : 12.8;
-      const height = id === "rock" ? 21.5 : id === "water" ? 14 : 17.5;
-      items[id] = sprite("actors", info[id].image, x, upper, width, height, "moving " + id);
-      if (id === "water") items.fire = sprite("actors", "fire", x, ground, 16, 25, "fire");
-      if (id === "hay" || id === "rock") items.spikes = sprite("actors", "spikes", x, ground, 12, 15);
-    }
-    addPin(id, x);
-  }
-
-  items.horse = sprite("actors", "horse", 13.7, ground, 17.2, 34, "horse");
-  items.chest = sprite("actors", "chest", 79.5, ground, 9.3, 17.5, "chest");
+  mountHorse();
+  items.chest = sprite("actors", "chest", 92, ground + .2, 5.4, 13, "chest");
+  still(items.chest, "chest-ready");
   hud();
-  status("观察机关，点按金色针环。");
+  status("Clear the track and free the racehorse.");
+  void board.offsetWidth;
+  board.classList.add("enter");
 }
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-function burst(name, x, y, w, h) {
-  const el = sprite("effects", name, x, y, w, h, "burst");
-  setTimeout(() => el.remove(), 900);
+function travel(el, x, y, duration, easing) {
+  el.animate([
+    { left: el.style.getPropertyValue("--x"), top: el.style.getPropertyValue("--y") },
+    { left: x + "%", top: y + "%" },
+  ], { duration, easing });
+  position(el, x, y);
+  return wait(duration);
 }
 
-function fail(reason) {
+function effect(name, fallback, x, y, width, height, extra = "") {
+  return animateSprite(sprite("effects", fallback, x, y, width, height, extra), name, fallback);
+}
+
+function fail(reason, symbol = "spikes") {
   state.outcome = "fail";
+  state.failureIcon = symbol;
+  clearPending();
   $("board").classList.add("failed", "shake");
   status(reason, "bad");
-  sound("fail");
   return reason;
 }
 
-const moves = {
-  async water(x, alive) {
-    status("水槽开启，水流正在冲向火堆。");
-    items.water.style.opacity = "0";
-    burst("waterfall", x, ground, 10, 45);
-    sound("water");
-    await delay(560);
+async function openSluice(bay, alive) {
+  const model = items[bay.id];
+  const hatch = model.sluice;
+  hatch.style.setProperty("--valve-time", timing.valve + "ms");
+  hatch.classList.add("open");
+  status("The spillway is opening.");
+  if (model.held) {
+    await wait(timing.sluiceRelease);
     if (!alive()) return;
-    items.fire.src = asset("steam");
-    items.fire.classList.remove("fire");
-    burst("splash", x, ground, 16, 20);
-    status("火熄灭了，赛道已降温。", "good");
-  },
-  async hay(x, alive) {
-    position(items.hay, x, ground);
-    sound("drop");
-    await delay(570);
-    if (!alive()) return;
-    if (current === 3 && !state.done.has("water")) {
-      items.hay.src = asset("fire");
-      items.hay.classList.add("fire");
-      return fail("草料被熔岩点燃，去路封死了。");
-    }
-    items.hay.src = asset("hay-bridge");
-    items.spikes.style.opacity = "0";
-    status("草料盖住了尖刺。", "good");
-  },
-  async bait(x, alive) {
-    position(items.bait, x + 1, 66);
-    sound("drop");
-    status("草料压动了踏板，灰狼正走向侧笼。");
-    await delay(380);
-    if (!alive()) return;
-    items.wolf.classList.add("moving");
-    position(items.wolf, x + 2.5, 65.5);
-    await delay(530);
-    if (!alive()) return;
-    status("灰狼已经进笼，关门时机到了。", "good");
-  },
-  async cage() {
-    items.cage.classList.remove("open");
-    sound("drop");
-    if (!state.done.has("bait")) return fail("笼门提前落下，灰狼留在赛道上。");
-    status("笼门落下，灰狼被关住了。", "good");
-  },
-  async rock(x, alive) {
-    position(items.rock, x, ground);
-    items.rock.style.rotate = "66deg";
-    sound("drop");
-    await delay(570);
-    if (!alive()) return;
-    if (!state.done.has("cage")) {
-      items.wolf.classList.add("moving");
-      position(items.wolf, 30, ground);
-      return fail("落石惊动了灰狼，它冲向了赛马！");
-    }
-    items.rock.style.opacity = "0";
-    items.spikes.src = asset("rubble");
-    burst("dust", x, ground, 13, 18);
-    status("滚石填平了最后一个陷坑。", "good");
-  },
-  async gate(_, alive) {
-    items.gate.classList.add("open");
-    const danger = [
-      [items.fire && !state.done.has("water"), "闸门开得太早，前方的火焰拦住了赛马。"],
-      [items.wolf && !state.done.has("cage"), "灰狼仍在赛道附近，赛马无法脱身。"],
-      [items.spikes && !state.done.has("hay") && !state.done.has("rock"), "前方的尖刺陷坑还没有填平。"],
-    ].find(([active]) => active);
-    if (danger) {
-      items.horse.classList.add("startled");
-      position(items.horse, 32, ground);
-      return fail(danger[1]);
-    }
-    status("通道打开了，赛马正奔向出口！", "good");
-    items.horse.classList.add("running");
-    position(items.horse, 90, ground);
-    await delay(890);
-    if (!alive()) return;
-    items.chest.src = asset("open-chest");
-    burst("ring", 90, ground, 18, 37);
-    state.outcome = "win";
-  },
-};
+    return releaseWater(bay, alive, true);
+  }
+  await wait(timing.valve);
+  if (!alive()) return;
+  status("The spillway is open.", "good");
+}
 
-async function pull(id) {
+async function drainPool(model, x, alive) {
+  await wait(360);
+  if (!alive()) return;
+  model.outlet?.classList.add("flowing");
+  model.drain.classList.add("flowing");
+  const runoff = effect("waterfall", "waterfall", x, 94, 2, 7.3, "drain-stream");
+  runoff.style.setProperty("--drain-time", timing.drain + "ms");
+  model.pool.style.setProperty("--drain-time", timing.drain + "ms");
+  model.pool.classList.add("draining");
+  await wait(timing.drain);
+  if (!alive()) return;
+  runoff.remove();
+  model.drain.classList.remove("flowing");
+  model.outlet?.classList.remove("flowing");
+  model.pool.remove();
+  model.pool = null;
+}
+
+async function releaseWater(bay, alive, fromSluice = false) {
+  const { id, x, sluice, outlet } = bay;
+  const model = items[id];
+  const blocked = sluice && !fromSluice && !state.done.has(id + "-sluice");
+  const source = fromSluice ? model.held : model.load;
+  if (fromSluice) model.held = null;
+  const impactY = blocked ? sluiceCatch : ground;
+  const stream = effect("waterfall", "waterfall", x, impactY, 4.7, impactY - (fromSluice ? sluiceCatch : shelf), "stream");
+  const fallTime = blocked ? timing.blockedStream : fromSluice ? timing.sluiceStream : timing.stream;
+  stream.style.setProperty("--flow-time", fallTime + "ms");
+  source.style.setProperty("--flow-time", (fromSluice ? 460 : fallTime) + "ms");
+  source.classList.add("emptying");
+  status("Water is rushing down the shaft.");
+  await wait(fallTime);
+  if (!alive()) return;
+  source.remove();
+  if (blocked) {
+    sound("splash");
+    stream.classList.add("draining");
+    model.held = animateSprite(sprite("actors", "water", x, impactY, 5.9, 8, "tank-water"),
+      "water", "water");
+    status("The sluice is holding the water.");
+    await wait(timing.impact);
+    if (!alive()) return;
+    stream.remove();
+    return;
+  }
+
+  model.fire.classList.add("quenched");
+  stream.classList.add("draining");
+  const steam = effect("quench", "steam", x, ground + .5, 15, 25, "steam-burst");
+  steam.style.setProperty("--steam-time", timing.steam + "ms");
+  const sealed = state.done.has(outlet);
+  model.pool = animateSprite(sprite("actors", "splash", x, floorSurface + 1.2, sealed ? 16 : 12.5,
+    sealed ? 5.2 : 4.1, "pool"), "ground-puddle", "splash");
+  const runoff = sealed ? null : drainPool(model, x, alive);
+  status("The water hit the fire. Steam is rising.");
+  sound("splash");
+  await wait(timing.steam);
+  if (!alive()) return;
+  stream.remove();
+  model.fire.remove();
+  model.fire = null;
+  steam.remove();
+  if (sealed) return fail("The boulder sealed the east runoff and flooded the track.");
+  status("The fire is out. Runoff is draining through the floor.", "good");
+  await runoff;
+  if (alive()) status("The fire is out. Runoff has drained through the floor.", "good");
+}
+
+function prerequisiteCleared(id) {
+  return kind(id) === "water" ? !items[id].fire : state.done.has(id);
+}
+
+async function releaseHay(bay, alive) {
+  const { x, after } = bay;
+  const model = items.hay;
+  const plateX = x - hayPlateOffset;
+  animateSprite(model.load, "hay-fall", "hay");
+  status("The hay is falling onto the guide chute.");
+  await travel(model.load, x, hayGuideTop, timing.hay, "cubic-bezier(.38,.08,.69,.58)");
+  if (!alive()) return;
+  await travel(model.load, plateX, hayPlateSurface, timing.haySlide, "ease-in");
+  if (!alive()) return;
+  model.load.remove();
+  const hit = effect("hay-impact", "dust", plateX, hayPlateSurface, 6.2, 9, "impact");
+  sound("impact");
+  if (after?.some((step) => !prerequisiteCleared(step))) {
+    animateSprite(sprite("actors", "fire", plateX, floorSurface, 9, 16, "fire"), "fire", "fire");
+    await wait(timing.impact);
+    if (!alive()) return;
+    hit.remove();
+    return fail("Heat from the nearby fire burned the hay before it could release the bridge.", "fire");
+  }
+  model.plate.classList.add("weighted");
+  model.bridgeLink.classList.add("engaged");
+  model.bridge.classList.add("lowered");
+  sprite("actors", "hay-bridge", plateX, hayPlateSurface, 5.7, 7.4, "plate-hay");
+  status("The hay trips the latch. The bridge is lowering over the spikes.");
+  await wait(timing.bridge);
+  if (!alive()) return;
+  hit.remove();
+  status("The drawbridge spans the pit. The spikes are below it.", "good");
+}
+
+async function releaseLoad(bay, alive) {
+  const { id, x, after } = bay;
+  if (id === "hay") return releaseHay(bay, alive);
+  const model = items[id];
+  const lure = id === "bait";
+  const landing = lure ? penSurface + .25 : floorSurface + 1.4;
+  animateSprite(model.load, id + "-fall", lure ? "hay" : "rock");
+  status(lure ? "The lure is falling into the pen." : "The boulder is falling.");
+  await travel(model.load, x, landing, lure ? timing.lure : timing.rock,
+    "cubic-bezier(.38,.08,.69,.58)");
+  if (!alive()) return;
+
+  sound("impact");
+  model.load.remove();
+  const hit = effect(id + "-impact", "dust", x, landing, lure ? baitWidth : 11, lure ? baitHeight : 16, "impact");
+  if (lure) {
+    animateSprite(items.wolf, "wolf-walk", "wolf");
+    status("The wolf is following the lure into the pen.");
+    await travel(items.wolf, x + 4, wolfGround, 580, "linear");
+    if (!alive()) return;
+    hit.remove();
+    sprite("actors", "hay", x, landing, baitWidth, baitHeight, "", motionAsset("bait-rest"));
+    items.wolf.classList.add("in-pen");
+    await travel(items.wolf, x - .55, penSurface + .95, timing.wolf - 580, "ease-out");
+    if (!alive()) return;
+    animateSprite(items.wolf, "wolf-idle", "wolf");
+    status("The wolf has entered the cage.", "good");
+    return;
+  }
+  model.spikes.classList.add("crushed");
+  await wait(timing.rockCrush);
+  if (!alive()) return;
+  model.spikes.remove();
+  model.trench.src = mechanismAsset("rubble-trench");
+  const sharedOutlet = levels[current].bays.find((candidate) => candidate.outlet === id);
+  if (sharedOutlet) items[sharedOutlet.id].outlet.classList.add("sealed");
+  if (after?.some((step) => !prerequisiteCleared(step))) {
+    const wolf = items.wolf;
+    animateSprite(wolf, "wolf-walk", "wolf");
+    await travel(wolf, 23, wolfGround, timing.wolf, "ease-in");
+    if (!alive()) return;
+    hit.remove();
+    return fail("The impact startled the wolf and drove it onto the track.", "wolf");
+  }
+  await wait(timing.impact - timing.rockCrush);
+  if (!alive()) return;
+  hit.remove();
+  status(sharedOutlet && items[sharedOutlet.id].fire ? "The boulder crushed the spikes and blocked the east drain."
+    : "The boulder crushed the spikes and wedged into the pit.", "good");
+}
+
+async function closeCage(bay, alive) {
+  const bars = items[bay.id].bars;
+  items[bay.id].linkage.classList.add("released");
+  bars.classList.remove("open");
+  await wait(timing.cage);
+  if (!alive()) return;
+  sound("impact");
+  if (!state.done.has("bait")) return fail("The cage shut before the wolf entered.");
+  status("The wolf is safely behind bars.", "good");
+}
+
+async function openStable(alive) {
+  clearPending();
+  for (const { btn } of Object.values(pins)) btn.disabled = true;
+  items.gate.classList.add("open");
+  status("The stable gate is lifting.");
+  await wait(timing.gate);
+  if (!alive()) return;
+  return runHorse(alive);
+}
+
+function firstHazard() {
+  for (const { id, x } of levels[current].bays) {
+    if (kind(id) === "water") {
+      if (items[id].fire) return { x, icon: "fire", effect: "dust", message: "The racehorse stumbled at the flames." };
+      if (items[id].pool) return { x, icon: "water", effect: "splash", message: "The racehorse slipped on the flooded track." };
+    } else if (id === "bait") {
+      if (!state.done.has("cage")) {
+        return { x: state.done.has("bait") ? x : x + 7.5, icon: "wolf", effect: "dust", message: "The loose wolf startled the racehorse." };
+      }
+    } else if (!state.done.has(id)) {
+      return { x, icon: "spikes", effect: "dust", message: "The racehorse stumbled at the open spike pit." };
+    }
+  }
+}
+
+async function fallAtHazard(horse, hazard, alive) {
+  status(hazard.message, "bad");
+  animateSprite(horse, "horse-fall", "horse");
+  items.horseTrack.classList.replace("galloping", "fallen");
+  const stumble = travel(items.horseTrack, hazard.x - 7.4, floorSurface, timing.fall, "ease-out");
+  await wait(timing.fallImpact);
+  if (!alive()) return;
+  const impact = sprite("effects", hazard.effect, hazard.x - 4.5, ground, 11, 15, "fall-burst");
+  sound(hazard.effect === "splash" ? "splash" : "impact");
+  await stumble;
+  if (!alive()) return;
+  impact.remove();
+  if (animationImages["horse-fall"].naturalWidth) still(horse, "horse-fallen");
+  return fail(hazard.message, hazard.icon);
+}
+
+async function runHorse(alive) {
+  const horse = items.horse;
+  const hazard = firstHazard();
+  const target = hazard ? hazard.x - 6 : finishLine;
+  const duration = Math.max(1050, timing.run * (target - stableStart) / (finishLine - stableStart));
+  status("The racehorse is on the move.");
+  animateSprite(horse, "horse-run", "horse");
+  items.horseTrack.classList.add("galloping");
+  sound("gallop");
+  await travel(items.horseTrack, target, floorSurface, duration, "cubic-bezier(.34,.18,.64,.92)");
+  if (!alive()) return;
+  stopSound("gallop");
+  if (hazard) return fallAtHazard(horse, hazard, alive);
+  items.horseTrack.classList.add("escaped");
+  animateSprite(items.chest, "chest-open", "open-chest");
+  sprite("effects", "ring", finishLine, ground, 14, 32, "portal-flash");
+  await wait(timing.chest);
+  if (!alive()) return;
+  still(items.chest, "chest-opened");
+  state.outcome = "win";
+  status("The racehorse is safe.", "good");
+}
+
+function requestPull(id, fromKeyboard) {
+  if (state.outcome || state.done.has(id) || pins[id].btn.disabled || state.pending.has(id)) return;
+  if (!state.busy) {
+    void pull(id, fromKeyboard);
+    return;
+  }
+  state.pending.set(id, fromKeyboard);
+  pins[id].btn.classList.add("queued");
+}
+
+function clearPending() {
+  for (const id of state.pending.keys()) pins[id].btn.classList.remove("queued");
+  state.pending.clear();
+}
+
+async function pull(id, fromKeyboard = false) {
   if (state.busy || state.outcome || state.done.has(id)) return;
   const attempt = state;
   const alive = () => state === attempt;
+  const { btn, bay } = pins[id];
+  const nextPin = fromKeyboard && Object.values(pins)
+    .find(({ btn: other }) => other !== btn && !other.disabled && !other.classList.contains("queued"))?.btn;
   state.busy = true;
   state.steps++;
-  const btn = pinButtons[id];
-  for (const pin of Object.values(pinButtons)) pin.classList.remove("hinted");
+  btn.classList.remove("queued");
   btn.classList.add("removed");
   btn.disabled = true;
+  if (nextPin) nextPin.focus();
   sound("pull");
   hud();
-  const [, x] = levels[current].pins.find(([name]) => name === id);
-  const reason = await moves[id](x, alive);
+  await wait(timing.pin);
   if (!alive()) return;
+
+  let reason;
+  if (id === "gate") reason = await openStable(alive);
+  else if (id === "cage") reason = await closeCage(bay, alive);
+  else if (id !== bay.id) reason = await openSluice(bay, alive);
+  else if (kind(id) === "water") reason = await releaseWater(bay, alive);
+  else reason = await releaseLoad(bay, alive);
+  if (!alive()) return;
+
   if (state.outcome === "fail") {
-    await delay(500);
+    await wait(timing.result);
     if (alive()) showResult(false, reason);
     return;
   }
   state.done.add(id);
+  for (const candidate of levels[current].bays) {
+    if (items[candidate.id].heat && candidate.after.every(prerequisiteCleared)) {
+      items[candidate.id].heat.classList.add("cooled");
+      items[candidate.id].heatLabel.textContent = "Bridge trigger";
+    }
+  }
   state.busy = false;
   if (state.outcome === "win") {
+    clearPending();
     const first = !progress[current];
     progress[current] = state.steps;
     try { localStorage.setItem(storageKey, JSON.stringify(progress)); } catch {}
+    $("coins").parentElement.classList.toggle("earned", first);
     hud();
-    sound("win");
     showResult(true, first);
-  } else {
-    hud();
+  } else if (state.pending.size) {
+    const [next, keyboard] = state.pending.entries().next().value;
+    state.pending.delete(next);
+    void pull(next, keyboard);
   }
 }
 
@@ -368,25 +699,26 @@ function showResult(win, detail) {
   const dialog = $("result");
   const final = current === levels.length - 1;
   dialog.classList.toggle("failure", !win);
-  $("result-icon").src = asset(win ? "trophy" : "spikes");
-  $("result-kicker").textContent = levels[current].area + " · 第 " + (current + 1) + " 关";
-  $("result-title").textContent = win ? (final ? "王冠赛道开启！" : "救援成功！") : "解谜失败！";
+  $("result-icon").src = asset(win ? "trophy" : state.failureIcon);
+  $("result-kicker").textContent = "Trial " + (current + 1) + " · " + levels[current].title;
+  $("result-title").textContent = win ? (final ? "Crown Run Complete" : "Track Cleared") : "Run Stopped";
   $("result-description").textContent = win
-    ? (final ? "五关全部通关，名马已抵达隐藏赛道。" : "赛马安全脱险，成功取得宝箱。")
+    ? (final ? "The royal racehorse reached the finish." : "The racehorse reached the exit and collected the chest.")
     : detail;
   $("reward").replaceChildren(...(win ? [
-    reward("star", "三星通关"), reward("coin", detail ? "+" + levels[current].coins : "已领取"),
-    reward("chest", "宝箱 1 / 1"),
-  ] : [reward("pin", "已拔针 " + state.steps + " / " + levels[current].pins.length)]));
-  $("again").lastChild.textContent = win ? "重玩本关" : "重新挑战";
-  $("next").querySelector("span").textContent = !win ? "查看提示" : final ? "章节地图" : "继续挑战";
+    reward("star", "Trial cleared"), reward("coin", detail ? "+" + levels[current].coins : "Reward claimed"),
+  ] : [reward("pin", state.steps + (state.steps === 1 ? " pin pulled" : " pins pulled"))]));
+  $("again").lastChild.textContent = win ? "Replay" : "Retry Trial";
+  $("next").hidden = !win;
+  $("next").querySelector("span").textContent = final ? "Level Map" : "Next Level";
   if ($("map-dialog").open) $("map-dialog").close();
   if (!dialog.open) dialog.showModal();
+  if (!win) $("again").focus();
 }
 
 function showMap() {
   $("result").close();
-  $("map-count").textContent = "已救援 " + Object.keys(progress).length + " / " + levels.length;
+  $("map-count").textContent = Object.keys(progress).length + " / " + levels.length + " cleared";
   $("map-nodes").replaceChildren(...levels.map((level, index) => {
     const btn = document.createElement("button");
     const title = document.createElement("b");
@@ -394,12 +726,13 @@ function showMap() {
     btn.type = "button";
     btn.className = "map-node";
     btn.classList.toggle("current", index === current);
+    if (index === current) btn.setAttribute("aria-current", "step");
     btn.disabled = index > unlocked();
     btn.style.left = level.map[0] + "%";
     btn.style.top = level.map[1] + "%";
     title.textContent = level.title;
     small.append(icon(btn.disabled ? "lock" : "star"), document.createTextNode(
-      btn.disabled ? " 完成前一关解锁" : progress[index] ? " 三星通关" : " 第 " + (index + 1) + " 关",
+      btn.disabled ? " Locked" : progress[index] ? " Cleared" : " Trial " + (index + 1),
     ));
     btn.append(title, small);
     btn.addEventListener("click", () => reset(index));
@@ -408,41 +741,48 @@ function showMap() {
   if (!$("map-dialog").open) $("map-dialog").showModal();
 }
 
-function hint() {
-  if (state.outcome === "fail") reset();
-  if (state.busy || state.outcome) return;
-  const [id] = levels[current].pins.find(([name]) => !state.done.has(name));
-  pinButtons[id].classList.add("hinted");
-  status(info[id].hint);
-}
-
 $("map").addEventListener("click", showMap);
 $("reset").addEventListener("click", () => reset());
-$("hint").addEventListener("click", hint);
 $("again").addEventListener("click", () => reset());
 $("next").addEventListener("click", () => {
-  if (state.outcome === "fail") hint();
-  else if (current === levels.length - 1) showMap();
+  if (current === levels.length - 1) showMap();
   else reset(current + 1);
 });
 for (const btn of document.querySelectorAll("[data-close]")) {
   btn.addEventListener("click", () => btn.closest("dialog").close());
 }
-$("sound").addEventListener("click", () => {
+$("sound").addEventListener("click", async () => {
   muted = !muted;
   $("sound").classList.toggle("muted", muted);
-  $("sound").setAttribute("aria-label", muted ? "开启音效" : "关闭音效");
+  $("sound").setAttribute("aria-label", muted ? "Enable audio" : "Mute audio");
   $("sound").setAttribute("aria-pressed", String(!muted));
-  sound("pull");
+  if (muted) {
+    music.pause();
+    for (const name of Object.keys(effects)) stopSound(name);
+  } else {
+    music.play().catch(() => {});
+    if (items.horse.dataset.motion === "horse-run" && !items.horseTrack.classList.contains("escaped")) sound("gallop");
+  }
 });
 $("fullscreen").addEventListener("click", async () => {
   try {
     if (document.fullscreenElement) await document.exitFullscreen();
     else if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
-    else status("横置手机可放大游戏画面。");
+    else status("Rotate your device for a larger view.");
   } catch {
-    status("当前浏览器的全屏功能不可用。");
+    status("Full screen is unavailable in this browser.");
+  }
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    music.pause();
+    stopSound("gallop");
+  } else if (!muted) {
+    music.play().catch(() => {});
+    if (state.busy && !state.outcome && items.horse.dataset.motion === "horse-run" &&
+        !items.horseTrack.classList.contains("escaped")) sound("gallop");
   }
 });
 
 reset();
+

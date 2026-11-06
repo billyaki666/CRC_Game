@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 188">
+  <defs>
+    <linearGradient id="iron">
+      <stop stop-color="#161c22"/>
+      <stop offset=".24" stop-color="#889194"/>
+      <stop offset=".46" stop-color="#4a555c"/>
+      <stop offset=".8" stop-color="#252d35"/>
+      <stop offset="1" stop-color="#11161b"/>
+    </linearGradient>
+    <linearGradient id="rail" x2="0" y2="1">
+      <stop stop-color="#717c81"/>
+      <stop offset=".3" stop-color="#455159"/>
+      <stop offset="1" stop-color="#1c242a"/>
+    </linearGradient>
+    <path id="bar" d="M0 0h8v174l-4 12-4-12z" fill="url(#iron)" stroke="#10151a" stroke-width=".7"/>
+    <circle id="rivet" r="2.15" fill="#a68a60" stroke="#222328" stroke-width=".8"/>
+  </defs>
+  <g transform="translate(5 1)">
+    <use href="#bar"/><use href="#bar" x="19.5"/><use href="#bar" x="39"/><use href="#bar" x="58.5"/><use href="#bar" x="78"/>
+  </g>
+  <path d="M2 16h92v13H2zm0 53h92v11H2zm0 85h92v12H2z" fill="url(#rail)" stroke="#151a1e" stroke-width="2"/>
+  <path d="M3 18h90M3 71h90M3 156h90" stroke="#99a5a5" stroke-opacity=".54"/>
+  <g>
+    <use href="#rivet" x="9" y="23"/><use href="#rivet" x="48" y="23"/><use href="#rivet" x="87" y="23"/>
+    <use href="#rivet" x="9" y="75"/><use href="#rivet" x="48" y="75"/><use href="#rivet" x="87" y="75"/>
+    <use href="#rivet" x="9" y="160"/><use href="#rivet" x="48" y="160"/><use href="#rivet" x="87" y="160"/>
+  </g>
+</svg>
