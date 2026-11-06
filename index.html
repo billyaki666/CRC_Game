@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#171020">
+  <title>赛马风云 · 马厩机关救援</title>
+  <meta name="description" content="五关横屏拔针解谜。疏水灭火、引开狼群，救出被困赛马。">
+  <link rel="icon" href="assets/crest.png">
+  <link rel="stylesheet" href="game.css">
+  <script src="game.js" defer></script>
+</head>
+<body>
+  <main class="game" id="game" aria-label="赛马风云 · 马厩机关救援">
+    <header class="topbar">
+      <div class="brand"><img src="assets/crest.png" alt=""><div><strong>赛马风云</strong><small>马厩机关救援</small></div></div>
+      <div class="chapter"><span id="chapter"></span><strong id="level-title"></strong></div>
+      <div class="top-tools">
+        <div class="wallet" aria-label="金币"><img src="assets/coin.png" alt=""><b id="coins">0</b></div>
+        <button class="icon sound muted" id="sound" type="button" aria-label="开启音效" aria-pressed="false"><img src="assets/sound.png" alt=""></button>
+        <button class="icon" id="fullscreen" type="button" aria-label="全屏"><img src="assets/fullscreen.png" alt=""></button>
+      </div>
+    </header>
+    <section class="play">
+      <aside class="mission" aria-label="关卡目标">
+        <span class="eyebrow">救援任务</span>
+        <h1 id="mission-title">救出赛马</h1>
+        <ul id="goals"></ul>
+        <div class="mission-progress"><span>拔针步数</span><b id="steps"></b></div>
+        <div class="segments" id="segments" aria-hidden="true"></div>
+        <p id="clue"></p>
+      </aside>
+      <section class="board" id="board" aria-label="拔针机关房间" data-region="stable">
+        <div class="board-light"></div>
+        <div id="scenery" aria-hidden="true"></div>
+        <div id="actors" aria-hidden="true"></div>
+        <div id="pins"></div>
+        <div id="effects" aria-hidden="true"></div>
+        <div class="zone-caption"><span></span><b id="zone"></b></div>
+      </section>
+    </section>
+    <footer class="controls">
+      <button type="button" class="btn" id="map"><img src="assets/map-icon.png" alt="">章节地图</button>
+      <p class="status" id="status" role="status"></p>
+      <div class="actions">
+        <button type="button" class="btn" id="reset"><img src="assets/reset.png" alt="">重置</button>
+        <button type="button" class="btn gold" id="hint"><img src="assets/key.png" alt="">提示</button>
+      </div>
+    </footer>
+    <dialog id="map-dialog" class="overlay map-screen" aria-labelledby="map-title">
+      <div class="map-top"><div><span class="eyebrow">马厩机关救援</span><h2 id="map-title">章节地图</h2></div><div class="map-count" id="map-count"></div><button class="icon close" data-close type="button" aria-label="关闭地图"><img src="assets/close.png" alt=""></button></div>
+      <div id="map-nodes"></div>
+      <div class="map-bottom">选择已解锁的关卡 <span>·</span> 救出赛马即可前进</div>
+    </dialog>
+    <dialog id="result" class="overlay result" aria-labelledby="result-title">
+      <button class="icon close" data-close type="button" aria-label="关闭结算"><img src="assets/close.png" alt=""></button>
+      <section class="result-card">
+        <img id="result-icon" class="result-icon" alt="">
+        <p class="eyebrow" id="result-kicker"></p>
+        <h2 id="result-title"></h2>
+        <p id="result-description"></p>
+        <div id="reward"></div>
+        <div class="result-actions">
+          <button type="button" class="btn" id="again"><img src="assets/reset.png" alt="">重玩本关</button>
+          <button type="button" class="btn gold" id="next"><img src="assets/play.png" alt=""><span>继续挑战</span></button>
+        </div>
+      </section>
+    </dialog>
+  </main>
+</body>
+</html>
